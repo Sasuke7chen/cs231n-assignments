@@ -84,7 +84,6 @@ def svm_loss_vectorized(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    num_classes = W.shape[1] # 10
     num_train = X.shape[0] # dev: 500
     scores = X.dot(W) 
     correct_class_score = scores[np.arange(num_train), y].reshape(-1, 1)
