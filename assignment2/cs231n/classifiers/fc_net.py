@@ -74,7 +74,11 @@ class FullyConnectedNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        L = self.num_layers
+        dims = [input_dim] + hidden_dims + [num_classes]
+        for i in range(L):  
+            self.params['W' + str(i + 1)] = np.random.randn(dims[i], dims[i+1]) * weight_scale
+            self.params['b' + str(i + 1)] = np.zeros(dims[i+1])
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -147,8 +151,19 @@ class FullyConnectedNet(object):
         # layer, etc.                                                              #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-        pass
+        
+        affine_caches = []
+        relu_caches = []
+        L = self.num_layers
+        output = X
+        # print(self.params['W1'].shape)
+        for i in range(L - 1):
+            out, affine_cache = affine_forward(output, self.params['W' + str(i + 1)], self.params['b' + str(i + 1)])
+            # batch/layer norm
+            output, relu_cache = relu_forward(out)
+            affine_caches.append(affine_cache)
+            relu_caches.append(relu_cache)
+        scores, cache = affine_forward(output, self.params['W' + str(L)], self.params['b' + str(L)])
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -175,7 +190,16 @@ class FullyConnectedNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        loss, dout = softmax_loss(scores, y)
+        for i in range(L):
+            loss += 0.5 * self.reg * np.sum(self.params['W' + str(i + 1)] * self.params['W' + str(i + 1)])
+
+        dH, dW, grads['b' + str(L)] = affine_backward(dout, cache)
+        grads['W' + str(L)] = dW + self.reg * self.params['W' + str(L)]
+        for i in reversed(range(L - 1)):
+            dH = relu_backward(dH, relu_caches[i])
+            dH, dW, grads['b' + str(i + 1)] = affine_backward(dH, affine_caches[i])
+            grads['W' + str(i + 1)] = dW + self.reg * self.params['W' + str(i + 1)]
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
