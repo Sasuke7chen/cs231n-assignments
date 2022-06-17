@@ -228,7 +228,14 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        x_mean = np.mean(x, axis=0)
+        x_var = np.var(x, axis=0)
+        xn = (x - x_mean) / np.sqrt(x_var + eps)
+        out = gamma * xn + beta
+        cache = (x, x_mean, x_var, xn, gamma, beta, eps)
+        
+        running_mean = momentum * running_mean + (1 - momentum) * x_mean
+        running_var = momentum * running_var + (1 - momentum) * x_var
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
@@ -243,7 +250,8 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        xn = (x - running_mean) / np.sqrt(running_var + eps)
+        out = gamma * xn + beta
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
@@ -284,7 +292,16 @@ def batchnorm_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    m = dout.shape[0]
+    x, x_mean, x_var, xn, gamma, beta, eps = cache
+    dgamma = np.sum(dout * xn, axis=0)
+    dbeta = np.sum(dout, axis=0)
+    dxn = dout * gamma
+    xm = x - x_mean
+    std = (x_var + eps) ** (-0.5)
+    dx_var = -np.sum(dxn * xm, axis=0) * (std ** 3) / 2
+    dx_mean = -np.sum(dxn * std + dx_var * 2 * xm / m, axis=0)
+    dx = dxn * std + dx_mean / m + dx_var * 2 * xm / m
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -318,8 +335,13 @@ def batchnorm_backward_alt(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
-
+    m = dout.shape[0]
+    x, x_mean, x_var, xn, gamma, beta, eps = cache
+    dgamma = np.sum(dout * xn, axis=0)
+    dbeta = np.sum(dout, axis=0)
+    dxn = dout * gamma
+    std = (x_var + eps) ** (-0.5)
+    dx = (dxn - (np.sum(dxn, axis=0) + xn * np.sum(dxn * xn, axis=0)) / m) * std 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #

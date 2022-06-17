@@ -79,6 +79,11 @@ class FullyConnectedNet(object):
         for i in range(L):  
             self.params['W' + str(i + 1)] = np.random.randn(dims[i], dims[i+1]) * weight_scale
             self.params['b' + str(i + 1)] = np.zeros(dims[i+1])
+            if i == L - 1:
+                continue
+            if self.normalization == "batchnorm":
+                self.params['gamma' + str(i + 1)] = np.ones(dims[i+1])
+                self.params['beta' + str(i + 1)] = np.zeros(dims[i+1])
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -154,12 +159,16 @@ class FullyConnectedNet(object):
         
         affine_caches = []
         relu_caches = []
+        bn_caches = []
         L = self.num_layers
         output = X
         # print(self.params['W1'].shape)
         for i in range(L - 1):
             out, affine_cache = affine_forward(output, self.params['W' + str(i + 1)], self.params['b' + str(i + 1)])
             # batch/layer norm
+            if self.normalization == "batchnorm":
+                out, bn_cache = batchnorm_forward(out, self.params['gamma' + str(i + 1)], self.params['beta' + str(i + 1)], self.bn_params[i])
+                bn_caches.append(bn_cache)
             output, relu_cache = relu_forward(out)
             affine_caches.append(affine_cache)
             relu_caches.append(relu_cache)
@@ -198,6 +207,8 @@ class FullyConnectedNet(object):
         grads['W' + str(L)] = dW + self.reg * self.params['W' + str(L)]
         for i in reversed(range(L - 1)):
             dH = relu_backward(dH, relu_caches[i])
+            if self.normalization == "batchnorm":
+                dH, grads['gamma' + str(i + 1)], grads['beta' + str(i + 1)] = batchnorm_backward_alt(dH, bn_caches[i])
             dH, dW, grads['b' + str(i + 1)] = affine_backward(dH, affine_caches[i])
             grads['W' + str(i + 1)] = dW + self.reg * self.params['W' + str(i + 1)]
 
