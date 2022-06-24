@@ -81,7 +81,7 @@ class FullyConnectedNet(object):
             self.params['b' + str(i + 1)] = np.zeros(dims[i+1])
             if i == L - 1:
                 continue
-            if self.normalization == "batchnorm":
+            if self.normalization == "batchnorm" or self.normalization == "layernorm":
                 self.params['gamma' + str(i + 1)] = np.ones(dims[i+1])
                 self.params['beta' + str(i + 1)] = np.zeros(dims[i+1])
 
@@ -159,7 +159,7 @@ class FullyConnectedNet(object):
         
         affine_caches = []
         relu_caches = []
-        bn_caches = []
+        n_caches = []
         L = self.num_layers
         output = X
         # print(self.params['W1'].shape)
@@ -167,8 +167,11 @@ class FullyConnectedNet(object):
             out, affine_cache = affine_forward(output, self.params['W' + str(i + 1)], self.params['b' + str(i + 1)])
             # batch/layer norm
             if self.normalization == "batchnorm":
-                out, bn_cache = batchnorm_forward(out, self.params['gamma' + str(i + 1)], self.params['beta' + str(i + 1)], self.bn_params[i])
-                bn_caches.append(bn_cache)
+                out, n_cache = batchnorm_forward(out, self.params['gamma' + str(i + 1)], self.params['beta' + str(i + 1)], self.bn_params[i])
+                n_caches.append(n_cache)
+            if self.normalization == "layernorm":
+                out, n_cache = layernorm_forward(out, self.params['gamma' + str(i + 1)], self.params['beta' + str(i + 1)], self.bn_params[i])
+                n_caches.append(n_cache)
             output, relu_cache = relu_forward(out)
             affine_caches.append(affine_cache)
             relu_caches.append(relu_cache)
@@ -208,7 +211,9 @@ class FullyConnectedNet(object):
         for i in reversed(range(L - 1)):
             dH = relu_backward(dH, relu_caches[i])
             if self.normalization == "batchnorm":
-                dH, grads['gamma' + str(i + 1)], grads['beta' + str(i + 1)] = batchnorm_backward_alt(dH, bn_caches[i])
+                dH, grads['gamma' + str(i + 1)], grads['beta' + str(i + 1)] = batchnorm_backward_alt(dH, n_caches[i])
+            if self.normalization == "layernorm":
+                dH, grads['gamma' + str(i + 1)], grads['beta' + str(i + 1)] = layernorm_backward(dH, n_caches[i])
             dH, dW, grads['b' + str(i + 1)] = affine_backward(dH, affine_caches[i])
             grads['W' + str(i + 1)] = dW + self.reg * self.params['W' + str(i + 1)]
 
